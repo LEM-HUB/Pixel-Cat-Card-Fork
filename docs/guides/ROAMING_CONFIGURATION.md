@@ -146,6 +146,28 @@ cards:
 ```
 
 
+### Two cats in one card
+
+Use `cats` on a single card to give each cat its own dock inside one card shell. Top-level options (for example `cell_size`, `mood_behaviour`, `social_behaviour`, `interaction_behaviour`) are shared; entries may override them.
+
+```yaml
+type: custom:pixel-cat-home
+cell_size: 2
+mood_behaviour: true
+social_behaviour: true
+interaction_behaviour: true
+columns: 2
+cats:
+  - cat_id: miso
+    name: Miso
+    color: '#ad6c2d'
+  - cat_id: nori
+    name: Nori
+    color: '#414b55'
+```
+
+Each resident keeps independent clocks, routes and mood, and the pair uses the normal same-view social rules. Controls and card chrome are hidden by default in this mode; set `show_controls: true` or per-cat `card_color`/`card_border_color` to override.
+
 ## Debug and performance
 
 Enable `debug_labels: true` for name/action below the cat; mood uses tint/text colour. `debug_names` is a separate above-cat name; `debug_mood` controls glow. Picker diagnostics default off. Shared actor-free monitor:

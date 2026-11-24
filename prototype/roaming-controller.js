@@ -248,6 +248,7 @@ class PixelCatHome extends HTMLElement {
   static async getConfigElement(){await customElements.whenDefined('pixel-cat-home-editor');return document.createElement('pixel-cat-home-editor');}
   constructor() { super(); this.attachShadow({mode:'open'}); this.config = {}; this.facing=1;this.onLayout = e => {window.pixelCatLayoutV1?.notify(this,e);window.pixelCatScrollV1?.mark(this,e);this.invalidate();}; this.onCardClick=event=>this.attractToClick(event); }
   setConfig(config) {
+    if(window.pixelCatPairV1?.config(this,config))return;
     this.creationColour||=window.pixelCatPolishV1?.colour()||'#222';this.config = {interaction_behaviour:true,prop_reactions:true,landing_reactions:true,startle_followups:true,...config,color:config.color||this.creationColour,show_controls:config.show_controls??config.show_home!==false,use_surface_candidates:config.use_surface_candidates!==false,card_climbing:config.card_climbing!==false,native_vertical_surfaces:config.native_vertical_surfaces!==false}; this.worldScale = Math.max(1,Math.min(6,Math.round(config.cell_size || 2)));this.lifeStage=['kitten','adult','senior'].includes(config.life_stage)?config.life_stage:'adult';this.scale=this.worldScale*(this.lifeStage==='kitten'?.5:1);
     if (this.isConnected) { this.disconnectedCallback(); this.connectedCallback(); }
   }
@@ -283,6 +284,7 @@ class PixelCatHome extends HTMLElement {
     };
   }
   connectedCallback() {
+    if(this.isPairHost){window.pixelCatPairV1?.mount(this);return;}
     if(this.active) return;
     const mode=this.config.mode;
     if(mode==='monitor'||mode==='behaviour-lab'){
