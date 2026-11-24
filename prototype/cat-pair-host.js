@@ -5,13 +5,24 @@
   // `shared_dock: true` gives the card one dock, `false` one dock per entry,
   // and the default paints no dock at all so the residents roam freely.
   const dockMode = host => host.config.shared_dock === true ? 'shared' : host.config.shared_dock === false ? 'separate' : 'free';
+  // Personalities belong to the resident, never to the card entry: the shared
+  // base only carries scale, chrome and the feature switches. Slot defaults
+  // keep the first cat busy and the second one slow and restful.
+  const personalKeys = ['name', 'color', 'temperament', 'relaxed_speed', 'casual_speed', 'interested_speed', 'prompted_speed', 'walk_speed', 'rest_ms', 'home_rest_ms', 'casual_wander', 'playful_pounces', 'idle_frame_ms'];
+  const personalities = [
+    {temperament: {boldness: .9, sociability: .65, curiosity: .95, patience: .2}, relaxed_speed: 15, casual_speed: 8, rest_ms: 4500, home_rest_ms: 5000, casual_wander: false},
+    {temperament: {boldness: .25, sociability: .45, curiosity: .3, patience: .95}, relaxed_speed: 5, casual_speed: 4, rest_ms: 24000, home_rest_ms: 28000, casual_wander: true, playful_pounces: false},
+  ];
   const pairConfig = (host, cat, index) => {
-    const shared = {...host.config};
+    const shared = {...host.config}, personality = personalities[index % personalities.length];
+    for (const key of personalKeys) delete shared[key];
     delete shared.cats;
     delete shared.type;
     return {
       ...shared,
+      ...personality,
       ...cat,
+      temperament: {...personality.temperament, ...cat.temperament},
       type: 'custom:pixel-cat-home',
       cat_id: cat.cat_id || `${host.config.cat_id || 'cat'}-${index + 1}`,
       show_home: cat.show_home ?? shared.show_home ?? true,
@@ -80,6 +91,9 @@
         config.show_home = cats[i].show_home ?? false;
         config.show_controls = cats[i].show_controls ?? false;
         config.primary_home = i === 0 ? cats[i].primary_home ?? true : false;
+        // Distinct slots: different start surface, and x spread when they share one.
+        config.dock_slot = i;
+        config.dock_slots = cats.length;
       }
       el.dockAnchorOwner = mode === 'shared' && i > 0 && config.show_home !== true ? nodes[0] : null;
       const signature = JSON.stringify(config);
