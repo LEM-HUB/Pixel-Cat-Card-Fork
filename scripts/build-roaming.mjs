@@ -119,6 +119,6 @@ const boxGrid=rows=>rows.length===24&&rows.every(row=>row.length===24);
 boxArt.exit=boxArt.exit.filter(boxGrid); // The catalogue excludes the same malformed legacy exit grid.
 if(boxArt.exit.length!==3||!boxArt.entry.every(boxGrid)||!boxGrid(boxArt.crouch))throw Error('Invalid cardboard box motion artwork');
 writeGenerated('pixel-cat-box.js',packedAssignment('window.pixelCatBoxArtV1',boxArt)+fs.readFileSync('prototype/cat-box-bed.js','utf8')+fs.readFileSync('prototype/cat-pair-host.js','utf8'));
-writeGenerated('pixel-cat-dashboard-chase.js',fs.readFileSync('prototype/cat-dashboard-chase.js','utf8'));
+writeGenerated('pixel-cat-dashboard-chase.js',fs.readFileSync('prototype/cat-dashboard-chase.js','utf8')+fs.readFileSync('prototype/cat-click-reactions.js','utf8'));
 for(const file of ['pixel-cat-roaming.js','pixel-cat-roaming-art.js','pixel-cat-roaming-extras.js','pixel-cat-behaviours.js','pixel-cat-affordances.js','pixel-cat-climbing.js','pixel-cat-box.js','pixel-cat-dashboard-chase.js'])if(fs.statSync(file).size>128000)throw Error(file+' exceeds the inline HA resource limit; split its packaging before deployment.');
 console.log('Built roaming controller:', fs.statSync('pixel-cat-roaming.js').size, 'bytes; artwork:',fs.statSync('pixel-cat-roaming-art.js').size,'bytes; source frames unchanged');

@@ -48,22 +48,30 @@ is not changed. `walk-head-development-project.json` is importable, and
 
 ## Click attention
 
-A primary click on a foreign card attracts the cat toward a nearby reachable
-point on that card. Clicking near a teal inspection target can choose that
-look-up stop; otherwise the closest enabled surface receives a stop projected
-near the click's horizontal position. A return route is required. Disabled
-interior candidates are not implicitly enabled by a click.
+A primary click on a foreign card reaches the nearest eligible cat, which chooses
+for itself how to answer. It may investigate a nearby reachable point on that
+card (clicking near a teal inspection target can choose that look-up stop;
+otherwise the closest enabled surface receives a stop projected near the click's
+horizontal position, and a return route is required). It may instead glance
+toward the click, flinch when the click lands very close and it is skittish, or
+keep doing what it was doing. Resting cats mostly stay put, a committed walk,
+jump or interaction is never abandoned, and mood and temperament weigh the odds,
+so no click guarantees the same reply. Answers are spaced by at least 600 ms.
+Disabled interior candidates are not implicitly enabled by a click.
 
 The capture listener never prevents the event or stops propagation. Card buttons
 continue their own actions; a card-height change was tested with attention routing
 at the same time. Modified clicks, form-field editing, the home card itself and
-blocked dialog/edit contexts do not attract him. `click_attention: false` disables
-this behaviour. If walking, he finishes the current distance-clocked footstep
-before rerouting. An active jump finishes before a new destination is planned.
+blocked dialog/edit contexts do not reach the cat. `click_attention: false`
+disables these replies. If walking, he finishes the current distance-clocked
+footstep before rerouting. An active jump finishes before a new destination is
+planned.
 
 ## Verification
 
-`test-roaming-attention-and-head.mjs` checks near-vertical drops at multiple scales
+`test-card-click-reactions.mjs` checks the four replies, their mood and
+temperament gating, the resting and busy cases, the repeat-click spacing and the
+opt-out. `test-roaming-attention-and-head.mjs` checks near-vertical drops at multiple scales
 and both facings, body-centre drift, two-cell ascent clearance, approved AI frame
 installation, independent head timing with identical paw rows, original-frame
 fallback, closest-click selection, modified/home click exclusion and safe walk

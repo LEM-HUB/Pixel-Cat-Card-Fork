@@ -47,7 +47,7 @@ const catEditorGroups=[
   ['dashboard_props','Shared dashboard toys','checkbox',false,'Put toys on the dashboard for cats to share.'],
   ['toy_mice','Add mice','number',1,'How many shared mice to put out.',0,6],
   ['toy_balls','Add balls','number',1,'How many shared balls to put out.',0,6],
-  ['click_attention','Follow dashboard clicks','checkbox',true,'The nearest eligible cat can investigate the clicked surface.']
+  ['click_attention','Follow dashboard clicks','checkbox',true,'The nearest eligible cat may investigate, glance at, flinch at or ignore the clicked surface.']
  ]},
  {title:'Advanced settings',fields:[
   ['show_controls','Show on-card controls','checkbox',false,'Show Pause, Spawn toy, Come home, and diagnostics.'],
