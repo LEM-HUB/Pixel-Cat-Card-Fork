@@ -1769,7 +1769,7 @@ companyOptions(){const a=this.actor,options=[];for(const m of this.memory.values
 const gap=6*Math.max(a.scale,m.scale);for(const x of [m.x-24*a.scale-gap,m.x+24*m.scale+gap]){const snapped=Math.round(x/a.scale)*a.scale;if(this.clear(surface,snapped)&&(!sameSupport(surface,a.support)||this.corridor(surface,snapped)))options.push({kind:'company',target:b,surface,x:snapped,observed:{...m}});}
 }return options;}
 decide(t){const a=this.actor;if(!this.available(a)||this.episode)return false;const v=a.ensureMood().values,weights=decisionWeights(v),options=[{kind:'explore',weight:weights.explore},{kind:'settle',weight:weights.settle}];
-if(a.config.social_behaviour&&this.clock>=this.nextSocial){const company=a.config.quiet_company===false?[]:this.companyOptions();if(company.length)options.push({...company[Math.floor(a.ensureMood().random()*company.length)],weight:weights.company*(.5+(this.traits?.sociability??.5))});}
+if(a.config.social_behaviour&&this.clock>=this.nextSocial){const company=a.config.quiet_company===false?[]:this.companyOptions();if(company.length)options.push({...company[Math.floor(a.ensureMood().random()*company.length)],weight:weights.company*(1+(this.traits?.sociability??.5))});}
 for(const option of options)option.weight*=window.pixelCatPostRestV1?.choiceWeight(a,option.kind)??1;
 const chosen=sampleDecision(options,()=>a.ensureMood().random(),a);this.log(chosen.kind,{weights:options.map(p=>({kind:p.kind,weight:p.weight})),target:chosen.target?.ownerKey});
 if(chosen.kind==='explore')return false;
@@ -1779,7 +1779,7 @@ return this.startCompany(chosen,t);
 startCompany(option,t){const a=this.actor;if(this.scene.has(a)||this.scene.has(option.target)||!this.clear(option.surface,option.x))return false;const path=a.pathTo(option.surface);if(!path)return false;
 this.episode={...option,started:this.clock,stage:'approach',expires:this.clock+22000};this.scene.set(a,this.episode);a.route=[...path,{settle:true,surface:option.surface,x:option.x}];a.destinationId=option.surface.id;a.destinationPoint='quiet-company';a.urgency='relaxed';a.deadline=0;this.log('company approach',{target:option.target.ownerKey});return true;
 }
-finish(reason){const ep=this.episode;if(!ep)return;const a=this.actor;this.episode=null;this.scene.delete(a);this.nextSocial=this.clock+25000;this.log('end '+ep.kind,{reason});a.deadline=0;if(ep.kind==='company'&&ep.stage==='approach'){a.route=[];a.finishing=false;}
+finish(reason){const ep=this.episode;if(!ep)return;const a=this.actor;this.episode=null;this.scene.delete(a);this.nextSocial=this.clock+10000;this.log('end '+ep.kind,{reason});a.deadline=0;if(ep.kind==='company'&&ep.stage==='approach'){a.route=[];a.finishing=false;}
 }
 advance(t){const a=this.actor,ep=this.episode;if(a.paused||a.suspended||a.stranded||a.goal||a.command||a.previewPose||a.play||a.toyHunt||a.playRequested||a.toyHuntRequested||!ep.target?.active&&ep.kind==='company'){this.finish('interrupted or actor removed');return;}
 if(ep.kind==='company'){
@@ -1809,7 +1809,7 @@ tick(t){if(this.last!==undefined)this.clock+=Math.max(0,Math.min(250,t-this.last
 emit(kind,data){const event={...Object.fromEntries(Object.entries(data).filter(([,v])=>['string','boolean'].includes(typeof v)||typeof v==='number'&&Number.isFinite(v))),id:'encounter-'+(++this.serial),kind,at:this.clock};this.events.push(event);if(this.events.length>64)this.events.shift();return event;}
 pair(a,b){return [a.ownerKey,b.ownerKey].sort().join('|');}
 ready(a,b){return !this.pairs.has(this.pair(a,b));}
-cool(a,b){this.pairs.set(this.pair(a,b),this.clock+30000);while(this.pairs.size>128)this.pairs.delete(this.pairs.keys().next().value);}
+cool(a,b){this.pairs.set(this.pair(a,b),this.clock+12000);while(this.pairs.size>128)this.pairs.delete(this.pairs.keys().next().value);}
 }
 const interactionWorld=root=>{let w=INTERACTION_WORLDS.get(root);if(!w){w=new InteractionWorld();INTERACTION_WORLDS.set(root,w);}return w;};
 const bodyHit=(frame,scale,point,pad=0)=>{if(!frame?.rows||!frame.placement)return false;const x=(point.x-frame.placement.x)/scale,y=(point.y-frame.placement.top)/scale,r=pad/scale;for(let cy=Math.max(0,Math.floor(y-r));cy<=Math.min(23,Math.floor(y+r));cy++)for(let cx=Math.max(0,Math.floor(x-r));cx<=Math.min(23,Math.floor(x+r));cx++)if(frame.rows[cy]?.[frame.facing<0?23-cx:cx]!=='.')return true;return false;};
@@ -1848,22 +1848,22 @@ encounter(t){const a=this.actor;if(this.clock<(this.nextEncounter||0)||this.epis
 if(!a.motion&&['loaf','sleep','scratch'].includes(a.idle?.pose)&&t<a.idle.poseUntil)return;
 if(a.goal||a.command||a.previewPose||a.play||a.playRequested||a.toyHunt||a.toyHuntRequested||a.recallPending||!a.active||a.paused||a.suspended||a.stranded)return;
 if(a.motion){this.walkingEncounter(t);return;}
-this.nextEncounter=this.clock+1800;const route=a.route;a.route=[];if(!this.available(a)){a.route=route;return;}
+this.nextEncounter=this.clock+900;const route=a.route;a.route=[];if(!this.available(a)){a.route=route;return;}
 const peers=this.peers(),seen=peers.filter(b=>this.visible?.has(b.ownerKey)),near=seen.filter(b=>sameSupport(a.support,b.support)),v=a.ensureMood().values,r=()=>a.ensureMood().random(),options=[{kind:'continue',weight:1.4+v.sleepiness}];
 const pat=this.clock>=this.nextSocial?this.socialOptions('pat'):[],ambush=this.clock>=this.nextSocial?this.socialOptions('ambush'):[];
-for(const [kind,list]of [['pat',pat],['ambush',ambush]])if(list.length){const target=list[Math.floor(r()*list.length)],m=target.observed,observedEye=worldGaze(m.frame.gaze,m.frame.placement,m.scale,m.frame.facing,110*m.scale),rear=observedEye.known&&!targetVisibility(observedEye,{x:a.x+12*a.scale,y:a.y-12*a.scale,width:20*a.scale,height:22*a.scale}).visible;const toyMemory=[...this.propMemory.values()].find(p=>p.carrier===target.target?.ownerKey&&this.clock-p.observedAt<300),toyInterest=toyMemory?(a.mouthState?.possessiveToy===toyMemory.id&&a.mouthState.clock<a.mouthState.possessiveUntil?2.3:1.5):1;options.push({...target,weight:toyInterest*(kind==='ambush'?(.25+1.8*v.playfulness)*(1-.7*v.sleepiness)*(m.pose==='sleep'&&kitten(a)?1.4*this.traits.boldness:rear?1.8:.5):(.2+v.playfulness)*this.traits.sociability)});}
+for(const [kind,list]of [['pat',pat],['ambush',ambush]])if(list.length){const target=list[Math.floor(r()*list.length)],m=target.observed,observedEye=worldGaze(m.frame.gaze,m.frame.placement,m.scale,m.frame.facing,110*m.scale),rear=observedEye.known&&!targetVisibility(observedEye,{x:a.x+12*a.scale,y:a.y-12*a.scale,width:20*a.scale,height:22*a.scale}).visible;const toyMemory=[...this.propMemory.values()].find(p=>p.carrier===target.target?.ownerKey&&this.clock-p.observedAt<300),toyInterest=toyMemory?(a.mouthState?.possessiveToy===toyMemory.id&&a.mouthState.clock<a.mouthState.possessiveUntil?2.3:1.5):1;options.push({...target,weight:toyInterest*(kind==='ambush'?(.35+2.6*v.playfulness)*(1-.7*v.sleepiness)*(m.pose==='sleep'&&kitten(a)?1.4*this.traits.boldness:rear?1.8:.5):(.35+1.4*v.playfulness)*this.traits.sociability)});}
 this.offerCuddle(options,v,r,t);
-const passing=near.find(b=>this.clock>=(this.lastAcknowledgement?.get(b.ownerKey)||0)&&socialGap(a,b)<36*Math.max(a.scale,b.scale)&&!this.scene.has(b));if(passing)options.push({kind:'acknowledge',target:passing,weight:.35+this.traits.sociability});
+const passing=near.find(b=>this.clock>=(this.lastAcknowledgement?.get(b.ownerKey)||0)&&socialGap(a,b)<36*Math.max(a.scale,b.scale)&&!this.scene.has(b));if(passing)options.push({kind:'acknowledge',target:passing,weight:.6+1.5*this.traits.sociability});
 this.encounterStats||={checks:0,opportunities:0,starts:0,acknowledgements:0};const stats=this.encounterStats;stats.checks++;stats.opportunities+=pat.length+ambush.length;
 a.setAttribute('data-encounters',JSON.stringify({...stats,seen:seen.length,sameSurface:near.length,pat:pat.length,ambush:ambush.length,rejected:this.socialRejections,cooldown:Math.max(0,Math.round(this.nextSocial-this.clock)),self:this.unavailableReason(a)}));
 for(const b of seen){this.noticedAt||=new Map();if(this.clock-(this.noticedAt.get(b.ownerKey)??-Infinity)>15000){this.noticedAt.set(b.ownerKey,this.clock);a.ensureMood().experience('notice');}}while(this.noticedAt?.size>32)this.noticedAt.delete(this.noticedAt.keys().next().value);
 for(const option of options)option.weight*=window.pixelCatPostRestV1?.choiceWeight(a,option.kind)??1;
 const chosen=sampleDecision(options,r,a);if(chosen.kind==='continue'){a.route=route;return;}
-if(chosen.kind==='acknowledge'){stats.acknowledgements++;this.lastAcknowledgement||=new Map();this.lastAcknowledgement.set(chosen.target.ownerKey,this.clock+12000);while(this.lastAcknowledgement.size>32)this.lastAcknowledgement.delete(this.lastAcknowledgement.keys().next().value);a.facing=chosen.target.x>a.x?1:-1;this.watchUntil=this.clock+900;a.deadline=t+1100;a.finishing=false;if(a.idle)a.idle.poseUntil=t;this.log('passing acknowledgement',{target:chosen.target.ownerKey});return;}
+if(chosen.kind==='acknowledge'){stats.acknowledgements++;this.lastAcknowledgement||=new Map();this.lastAcknowledgement.set(chosen.target.ownerKey,this.clock+7000);while(this.lastAcknowledgement.size>32)this.lastAcknowledgement.delete(this.lastAcknowledgement.keys().next().value);a.facing=chosen.target.x>a.x?1:-1;this.watchUntil=this.clock+900;a.deadline=t+1100;a.finishing=false;if(a.idle)a.idle.poseUntil=t;this.log('passing acknowledgement',{target:chosen.target.ownerKey});return;}
 if(this.startSocial(chosen,t))a.finishing=false;else a.route=route;
 }
-walkingEncounter(t){const a=this.actor,m=a.motion;if(this.clock<(this.nextWalkingEncounter||0)||m.kind!=='walk'||m.gallopTimeline||m.sneakTimeline||!m.cumulativeMs?.length||!sameSupport(a.support,m.target))return;this.nextWalkingEncounter=this.clock+2500;
-const b=this.peers().find(b=>this.visible?.has(b.ownerKey)&&this.available(b)&&sameSupport(a.support,b.support)&&!this.scene.has(b)&&this.world.ready(a,b)&&Math.abs(b.x-a.x)<100*a.scale&&Math.sign(b.x-a.x)===a.facing);if(!b||a.ensureMood().random()>.2+.5*a.ensureMood().values.playfulness)return;
+walkingEncounter(t){const a=this.actor,m=a.motion;if(this.clock<(this.nextWalkingEncounter||0)||m.kind!=='walk'||m.gallopTimeline||m.sneakTimeline||!m.cumulativeMs?.length||!sameSupport(a.support,m.target))return;this.nextWalkingEncounter=this.clock+1200;
+const b=this.peers().find(b=>this.visible?.has(b.ownerKey)&&this.available(b)&&sameSupport(a.support,b.support)&&!this.scene.has(b)&&this.world.ready(a,b)&&Math.abs(b.x-a.x)<100*a.scale&&Math.sign(b.x-a.x)===a.facing);if(!b||a.ensureMood().random()>.3+.5*a.ensureMood().values.playfulness)return;
 const elapsed=t-m.start,index=m.cumulativeMs.findIndex(ms=>ms>elapsed);if(index<0||index+1>=m.cells)return;
 const first=Math.ceil((m.direction>0?a.support.min-m.fromX:m.fromX-a.support.max)/a.scale),cells=Math.max(index+1,first),x=m.fromX+m.direction*cells*a.scale;
 if(cells>=m.cells||!Number.isFinite(x)||x<a.support.min||x>a.support.max)return;
@@ -1882,7 +1882,7 @@ const option={kind,target:b,observed:{...m},surface:s,x,offset:x-s.left,directio
 }
 patClear(o){const a=this.actor,clip=this.art().idleSequences?.bat;if(!clip)return false;const top=o.surface.top-24*a.scale;for(const rows of clip.frames)for(let y=0;y<24;y++)for(let x=0;x<24;x++){if(rows[y][x]==='.'||x>=15&&y>=16&&y<=21)continue;const point={x:o.x+((o.direction>0?x:23-x)+.5)*a.scale,y:top+(y+.5)*a.scale};if(bodyHit(o.observed.frame,o.observed.scale,point))return false;}return true;}
 decide(t){if(!this.enabled())return super.decide(t);const a=this.actor;if(!this.available(a)||this.episode)return false;const v=a.ensureMood().values,r=()=>a.ensureMood().random(),options=[{kind:'ordinary',weight:1.3+v.sleepiness}];
-if(this.clock>=this.nextSocial){for(const kind of ['pat','ambush']){const list=this.socialOptions(kind);if(list.length)options.push({...list[Math.floor(r()*list.length)],weight:kind==='pat'?(.15+v.playfulness*.7)*this.traits.sociability:(.1+v.playfulness)*(1-v.sleepiness)*this.traits.boldness});}}
+if(this.clock>=this.nextSocial){for(const kind of ['pat','ambush']){const list=this.socialOptions(kind);if(list.length)options.push({...list[Math.floor(r()*list.length)],weight:kind==='pat'?(.35+1.4*v.playfulness)*this.traits.sociability:(.25+1.9*v.playfulness)*(1-v.sleepiness)*this.traits.boldness});}}
 this.offerCuddle(options,v,r,t);
 const props=this.propOptions();if(props.length&&this.clock>=this.nextProp)options.push({...props[Math.floor(r()*props.length)],weight:(.2+v.playfulness)*this.traits.curiosity});
 const chosen=sampleDecision(options,r,a);if(chosen.kind==='ordinary')return super.decide(t);this.log('opportunity '+chosen.kind,{weights:options.map(o=>({kind:o.kind,weight:o.weight})),target:chosen.target?.ownerKey||chosen.id});return chosen.kind==='prop'?this.startProp(chosen,t):this.startSocial(chosen,t);
@@ -1936,7 +1936,7 @@ if(Math.abs(option.x-a.x)>a.scale&&a.moveTo(option.x,a.support.top,0,'walk',a.su
 }else this.sneakBeat(ep,t);
 this.encounterStats||={checks:0,opportunities:0,starts:0,acknowledgements:0};this.encounterStats.starts++;if(ep.kind!=='cuddle')a.ensureMood().experience('play');a.deadline=t+15000;this.log('begin '+ep.kind,{target:b.ownerKey});return true;
 }
-sneakBeat(ep,t){const a=this.actor,remaining=ep.x-a.x,step=Math.sign(remaining)*Math.min(Math.max(0,Math.abs(remaining)-12*a.scale),(ep.beats===0?10:6)*a.scale);if(Math.abs(step)<2*a.scale){ep.stage='check';ep.wait=this.clock+400;return;}a.urgency='relaxed';a.moveTo(a.x+step,a.support.top,0,'walk',a.support,t,'sneak');ep.beats++;}
+sneakBeat(ep,t){const a=this.actor,s=a.support,remaining=ep.x-a.x,step=Math.sign(remaining)*Math.min(Math.max(0,Math.abs(remaining)-12*a.scale),(ep.beats===0?10:6)*a.scale),lo=Number.isFinite(s.min)?s.min:-Infinity,hi=Number.isFinite(s.max)?s.max:Infinity,x=Math.max(lo,Math.min(hi,a.x+step));if(Math.abs(x-a.x)<2*a.scale){ep.stage='check';ep.wait=this.clock+400;return;}a.urgency='relaxed';a.moveTo(x,s.top,0,'walk',s,t,'sneak');ep.beats++;}
 prepareIdle(idle,t){const ep=this.episode,a=this.actor;if(ep?.kind==='cuddle'&&ep.stage==='settle'&&idle.pose==='sleep'){ep.stage='cuddled';a.deadline=idle.poseUntil;ep.expires=this.clock+idle.poseUntil-t+500;}if((!ep||ep.kind==='company'&&ep.stage==='rest')&&!a.play&&!a.previewPose&&['loaf','sleep'].includes(idle.pose)){a.deadline=Math.max(a.deadline||0,idle.poseUntil);if(ep)ep.expires=Math.max(ep.expires,this.clock+idle.poseUntil-t);}if(ep?.interaction&&ep.initiator===a&&ep.stage==='stroke'&&idle.pose==='bat')idle.poseUntil=t+this.art().idleSequences.bat.durations.reduce((n,d)=>n+d,0)*Math.max(80,Number(a.config.idle_frame_ms)||250)/250;}
 contactFrame(sample,placement,bridging,t){const a=this.actor,ep=this.episode,c=this.art().interactionContacts?.bat;if(!ep?.interaction||ep.initiator!==a||ep.stage!=='stroke'||ep.struck||bridging||a.idle?.pose!=='bat'||sample.frame!==c?.frame)return;ep.struck=true;const point={x:placement.x+((a.facing>0?c.point[0]:23-c.point[0])+.5)*a.scale,y:placement.top+(c.point[1]+.5)*a.scale},b=ep.target;
 const hit=sameSupport(a.support,b.support)&&bodyHit(b.social.frame,b.scale,point,a.scale/2);this.log('social pat '+(hit?'contact':'miss'),{target:b.ownerKey,point});if(hit)this.socialCue(ep,b,point,t,'Gentle social pat');
@@ -1976,7 +1976,7 @@ if(a.ensureMood().random()<(noticed?.65:.18)){this.finish(noticed?'apparently no
 if(!this.corridor(s,ep.x,[b])||a.moveTo(ep.x,s.top,0,'jump',s,t)===false){this.finish('unsafe pounce');return;}ep.stage='land';this.log('ambush pounce',{lastSeen:m.at});
 }else if(ep.stage==='land'){const close=nearbyPlayLanding(a,b);this.log(close?'nearby play landing':'ambush miss',{target:b.ownerKey});if(close)this.socialCue(ep,b,{x:a.x+12*a.scale,y:s.top},t,kitten(a)&&ep.observed.pose==='sleep'&&sleeping(b,t)?'Pounce beside sleeper':'Nearby play landing');else this.finish('pounce landed short');}
 }
-finish(reason){this.pendingImpact=null;const ep=this.episode;if(!ep?.interaction)return super.finish(reason);const participants=ep.participants||[this.actor];for(const a of participants){const registry=ep.registry||this.scene;if(registry.get(a)===ep)registry.delete(a);const layer=a.social;if(!layer)continue;if(layer.scene.get(a)===ep)layer.scene.delete(a);if(layer.episode!==ep)continue;layer.episode=null;layer.nextSocial=layer.clock+25000;layer.watchUntil=0;layer.log('end '+ep.kind,{reason});a.deadline=0;}
+finish(reason){this.pendingImpact=null;const ep=this.episode;if(!ep?.interaction)return super.finish(reason);const participants=ep.participants||[this.actor];for(const a of participants){const registry=ep.registry||this.scene;if(registry.get(a)===ep)registry.delete(a);const layer=a.social;if(!layer)continue;if(layer.scene.get(a)===ep)layer.scene.delete(a);if(layer.episode!==ep)continue;layer.episode=null;layer.nextSocial=layer.clock+10000;layer.watchUntil=0;layer.log('end '+ep.kind,{reason});a.deadline=0;}
 if(ep.kind==='prop'){const p=this.actor.propScene?.props.find(p=>p.id===ep.id);if(p?.claimedBy===this.actor.ownerKey){p.claimedBy=null;p.cooldownUntil=this.actor.propScene.time+5000;p.lastInteractor=this.actor.ownerKey;p.availableToOthersAt=this.actor.propScene.time+1000;}}
 }
 restPose(){const observed=window.pixelCatObserverV1?.pose(this);if(observed)return observed;const ep=this.episode;if(ep?.interaction&&ep.kind!=='chase'){if(ep.initiator!==this.actor)return this.actor.idle?.pose||'sit';return ep.kind==='cuddle'&&['settle','cuddled'].includes(ep.stage)?'sleep':ep.stage==='wiggle'?'wiggle':ep.stage==='stroke'?'bat':ep.stage==='check'?'look':ep.stage==='watch'?'lookdown':'sit';}if(this.enabled()&&this.watchUntil>this.clock)return 'glance';return super.restPose();}
@@ -3158,6 +3158,7 @@ static getStubConfig(){return {type:'custom:pixel-cat-home',life_stage:'adult',c
 static async getConfigElement(){await customElements.whenDefined('pixel-cat-home-editor');return document.createElement('pixel-cat-home-editor');}
 constructor() { super(); this.attachShadow({mode:'open'}); this.config = {}; this.facing=1;this.onLayout = e => {window.pixelCatLayoutV1?.notify(this,e);window.pixelCatScrollV1?.mark(this,e);this.invalidate();}; this.onCardClick=event=>this.attractToClick(event); }
 setConfig(config) {
+if(window.pixelCatPairV1?.config(this,config))return;
 this.creationColour||=window.pixelCatPolishV1?.colour()||'#222';this.config = {interaction_behaviour:true,prop_reactions:true,landing_reactions:true,startle_followups:true,...config,color:config.color||this.creationColour,show_controls:config.show_controls??config.show_home!==false,use_surface_candidates:config.use_surface_candidates!==false,card_climbing:config.card_climbing!==false,native_vertical_surfaces:config.native_vertical_surfaces!==false}; this.worldScale = Math.max(1,Math.min(6,Math.round(config.cell_size || 2)));this.lifeStage=['kitten','adult','senior'].includes(config.life_stage)?config.life_stage:'adult';this.scale=this.worldScale*(this.lifeStage==='kitten'?.5:1);
 if (this.isConnected) { this.disconnectedCallback(); this.connectedCallback(); }
 }
@@ -3193,6 +3194,7 @@ this.social?.finish('pause');this.paused = !this.paused; this.shadowRoot.querySe
 };
 }
 connectedCallback() {
+if(this.isPairHost){window.pixelCatPairV1?.mount(this);return;}
 if(this.active) return;
 const mode=this.config.mode;
 if(mode==='monitor'||mode==='behaviour-lab'){
@@ -4759,6 +4761,95 @@ window.pixelCatBoxV1={
  }
 };
 })();
+// Optional multi-resident card shell (`cats:` on a pixel-cat-home card).
+// Kept with the box module so the controller stays inside its inline budget.
+(() => {
+  const MAX_CATS = 8;
+  const pairConfig = (host, cat, index) => {
+    const shared = {...host.config};
+    delete shared.cats;
+    delete shared.type;
+    return {
+      ...shared,
+      ...cat,
+      type: 'custom:pixel-cat-home',
+      cat_id: cat.cat_id || `${host.config.cat_id || 'cat'}-${index + 1}`,
+      show_home: cat.show_home ?? shared.show_home ?? true,
+      show_controls: cat.show_controls ?? shared.show_controls ?? false,
+      card_color: cat.card_color ?? shared.card_color ?? 'transparent',
+      card_border_color: cat.card_border_color ?? shared.card_border_color ?? 'transparent',
+      card_radius: cat.card_radius ?? shared.card_radius ?? 0,
+    };
+  };
+  const unmount = host => {
+    for (const child of host.pairChildren || []) child.remove();
+    host.pairChildren = [];
+    host.pairRoot = null;
+    host.shadowRoot.innerHTML = '';
+    delete host.hass;
+    delete host.__pairHass;
+  };
+  const installHass = host => {
+    if (host.__pairHass) return;
+    host.__pairHass = true;
+    // The card shell forwards Home Assistant state to every resident.
+    Object.defineProperty(host, 'hass', {
+      configurable: true,
+      get() { return this._hass; },
+      set(value) {
+        this._hass = value;
+        if (this.monitorCard) this.monitorCard.hass = value;
+        for (const child of this.pairChildren || []) child.hass = value;
+      },
+    });
+  };
+  const mount = host => {
+    const cats = host.pairCats || [];
+    if (!cats.length) return;
+    installHass(host);
+    const columns = Math.max(1, Math.min(4, Math.round(Number(host.config.columns) || cats.length)));
+    if (!host.pairRoot) {
+      host.shadowRoot.innerHTML = `<style>:host{display:block}ha-card{display:block;box-sizing:border-box;padding:6px;background:var(--ha-card-background,var(--card-background-color,#fff));border-radius:var(--ha-card-border-radius,12px);border:1px solid var(--divider-color,#ddd);font:12px system-ui;color:var(--primary-text-color,#222)}.pair{display:grid;gap:8px;align-items:start}.pair>pixel-cat-home{display:block;min-width:0}</style><ha-card><div class="pair" role="group" aria-label="Pixel cats"></div></ha-card>`;
+      host.pairRoot = host.shadowRoot.querySelector('.pair');
+    }
+    host.pairRoot.style.gridTemplateColumns = `repeat(${columns},minmax(0,1fr))`;
+    const nodes = [...host.pairRoot.children].filter(el => el.localName === 'pixel-cat-home');
+    for (let i = 0; i < cats.length; i++) {
+      const el = nodes[i] || document.createElement('pixel-cat-home');
+      const config = pairConfig(host, cats[i], i);
+      const signature = JSON.stringify(config);
+      // Reuse a resident across host reconnects; only a changed config restarts it.
+      if (el.__pairSignature !== signature) { el.__pairSignature = signature; el.setConfig(config); }
+      if (!el.isConnected) host.pairRoot.append(el);
+      if (host._hass) el.hass = host._hass;
+    }
+    for (const extra of nodes.slice(cats.length)) extra.remove();
+    host.pairChildren = [...host.pairRoot.children].filter(el => el.localName === 'pixel-cat-home');
+    host.setAttribute('data-cat-count', String(cats.length));
+  };
+  window.pixelCatPairV1 = {
+    config(host, config) {
+      const cats = Array.isArray(config?.cats) ? config.cats.filter(c => c && typeof c === 'object' && !Array.isArray(c)).slice(0, MAX_CATS) : [];
+      if (!cats.length) {
+        if (host.isPairHost) { host.isPairHost = false; unmount(host); }
+        return false;
+      }
+      // A card that was already running one resident hands its overlay back
+      // before the shared shell takes over.
+      if (!host.isPairHost && host.active) { host.isPairHost = false; host.disconnectedCallback(); }
+      host.isPairHost = true;
+      host.config = {...config};
+      host.pairCats = cats;
+      host.worldScale = 4;
+      host.scale = 4;
+      installHass(host);
+      if (host.isConnected) mount(host);
+      return true;
+    },
+    mount,
+    unmount,
+  };
+})();
 
 })();
 
@@ -4961,7 +5052,7 @@ window.pixelCatDashboardChaseV1={
 
 })();
 
-window.pixelCatCardRelease=Object.freeze({version:"1.1.0",sourceHash:"89667edff939024497481bec68db5c01b923a03494886c8af018c0bb56a18211"});
+window.pixelCatCardRelease=Object.freeze({version:"1.1.0",sourceHash:"9cc33595e2b6730e09a2237cbc93dae1d78dc64f4555b517b5190e6758134276"});
 const card=window.customCards?.find(c=>c.type==='pixel-cat-home');if(card){card.name='Pixel Cat Card';card.documentationURL='https://github.com/Future-Surfer/Pixel-Cat-Card#readme';}
 console.info('Pixel Cat Card',"1.1.0");
 })();
