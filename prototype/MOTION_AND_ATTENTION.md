@@ -57,6 +57,10 @@ toward the click, flinch when the click lands very close and it is skittish, or
 keep doing what it was doing. Resting cats mostly stay put, a committed walk,
 jump or interaction is never abandoned, and mood and temperament weigh the odds,
 so no click guarantees the same reply. Answers are spaced by at least 600 ms.
+A cat already standing on the clicked card answers before a merely closer cat
+elsewhere. When the clicked card has no reachable stop and safe way back (common
+in a one-column phone layout), the cat still turns and glances toward the click
+instead of ignoring it; only a committed action suppresses that pose.
 Disabled interior candidates are not implicitly enabled by a click.
 
 The capture listener never prevents the event or stops propagation. Card buttons
