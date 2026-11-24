@@ -148,7 +148,9 @@ cards:
 
 ### Cats in one card without a starter dock
 
-Use `cats` on a single card to run several residents from one card entry. By default the card paints nothing: no bed, no bowl and no card chrome, and each cat lives on an ordinary dashboard surface and roams freely. The first entry is marked `primary_home`; set `show_home: true` on an entry to give that cat its own dock again. Top-level options (for example `cell_size`, `mood_behaviour`, `social_behaviour`, `interaction_behaviour`) are shared; entries may override them.
+Use `cats` on a single card to run several residents from one card entry. By default the card paints nothing: no bed, no bowl and no card chrome, and each cat lives on an ordinary dashboard surface and roams freely. Residents start on different visible surfaces where the view offers them, and spread out when they share one. The first entry is marked `primary_home`; set `show_home: true` on an entry to give that cat its own dock again.
+
+The card entry supplies only `cell_size`, card chrome and the feature switches (`mood_behaviour`, `social_behaviour`, `interaction_behaviour`, props, reactions). Personality settings stay per entry: `temperament` (`boldness`, `sociability`, `curiosity`, `patience`), `relaxed_speed`, `casual_speed`, `interested_speed`, `prompted_speed`, `rest_ms`, `home_rest_ms`, `casual_wander` and `playful_pounces`. Entries without their own values get slot defaults: the first cat is brisk and curious (fast walk, short rests, no meandering), the second is slow and restful (slow amble, long loafs and naps); further entries alternate.
 
 ```yaml
 type: custom:pixel-cat-home
@@ -156,17 +158,22 @@ cell_size: 2
 mood_behaviour: true
 social_behaviour: true
 interaction_behaviour: true
-columns: 2
 cats:
   - cat_id: miso
     name: Miso
     color: '#ad6c2d'
+    temperament: {boldness: 0.9, curiosity: 1, patience: 0.2}
+    relaxed_speed: 16
+    rest_ms: 4000
   - cat_id: nori
     name: Nori
     color: '#414b55'
+    temperament: {boldness: 0.2, curiosity: 0.2, patience: 1}
+    relaxed_speed: 5
+    rest_ms: 30000
 ```
 
-Each resident keeps independent clocks, routes and mood, and the pair uses the normal same-view social rules. `shared_dock: true` gives the card one dock instead: the first entry owns the bed, bowl and controls and is primary, later entries draw no furniture, keep their own clocks and mood, and return home to the same floor. `shared_dock: false` gives every entry its own dock again; `columns` then controls that grid and defaults to the number of cats.
+Each resident keeps independent clocks, routes, mood, pace and rest profile, and the pair uses the normal same-view social rules. `shared_dock: true` gives the card one dock instead: the first entry owns the bed, bowl and controls and is primary, later entries draw no furniture, keep their own clocks and mood, and return home to the same floor. `shared_dock: false` gives every entry its own dock again; `columns` then controls that grid and defaults to the number of cats.
 
 ## Debug and performance
 
