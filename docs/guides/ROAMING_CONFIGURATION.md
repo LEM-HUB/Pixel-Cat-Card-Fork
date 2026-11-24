@@ -146,9 +146,9 @@ cards:
 ```
 
 
-### Cats in one card and one dock
+### Cats in one card without a starter dock
 
-Use `cats` on a single card to run several residents in one shell. By default all of them use the first entry's dock: one bed, one bowl and one set of controls, marked `primary_home`. Later entries draw no furniture, keep their own clocks and mood, and return home to that same floor; they start in separate slots of the dock. Top-level options (for example `cell_size`, `mood_behaviour`, `social_behaviour`, `interaction_behaviour`) are shared; entries may override them.
+Use `cats` on a single card to run several residents from one card entry. By default the card paints nothing: no bed, no bowl and no card chrome, and each cat lives on an ordinary dashboard surface and roams freely. The first entry is marked `primary_home`; set `show_home: true` on an entry to give that cat its own dock again. Top-level options (for example `cell_size`, `mood_behaviour`, `social_behaviour`, `interaction_behaviour`) are shared; entries may override them.
 
 ```yaml
 type: custom:pixel-cat-home
@@ -166,7 +166,7 @@ cats:
     color: '#414b55'
 ```
 
-Each resident keeps independent clocks, routes and mood, and the pair uses the normal same-view social rules. Controls and card chrome are hidden by default; set `show_controls: true` on the first entry or per-cat `card_color`/`card_border_color` to override. `shared_dock: false` gives every entry its own dock again; `columns` then controls that grid and defaults to the number of cats.
+Each resident keeps independent clocks, routes and mood, and the pair uses the normal same-view social rules. `shared_dock: true` gives the card one dock instead: the first entry owns the bed, bowl and controls and is primary, later entries draw no furniture, keep their own clocks and mood, and return home to the same floor. `shared_dock: false` gives every entry its own dock again; `columns` then controls that grid and defaults to the number of cats.
 
 ## Debug and performance
 

@@ -2,6 +2,9 @@
 // Kept with the box module so the controller stays inside its inline budget.
 (() => {
   const MAX_CATS = 8;
+  // `shared_dock: true` gives the card one dock, `false` one dock per entry,
+  // and the default paints no dock at all so the residents roam freely.
+  const dockMode = host => host.config.shared_dock === true ? 'shared' : host.config.shared_dock === false ? 'separate' : 'free';
   const pairConfig = (host, cat, index) => {
     const shared = {...host.config};
     delete shared.cats;
@@ -23,6 +26,8 @@
     host.pairChildren = [];
     host.pairRoot = null;
     host.roamerRoot = null;
+    host.style.display = '';
+    delete host.getCardSize;
     host.shadowRoot.innerHTML = '';
     delete host.hass;
     delete host.__pairHass;
@@ -45,47 +50,52 @@
     const cats = host.pairCats || [];
     if (!cats.length) return;
     installHass(host);
-    // One visible dock per card by default: the first resident owns the bed,
-    // bowl and controls and is the primary home; the others anchor their home
-    // to that dock instead of drawing a second one.
-    const docked = host.config.shared_dock !== false && (cats[0].show_home ?? host.config.show_home ?? true) !== false;
-    const columns = Math.max(1, Math.min(4, Math.round(Number(host.config.columns) || (docked ? 1 : cats.length))));
+    const mode = dockMode(host);
+    const columns = Math.max(1, Math.min(4, Math.round(Number(host.config.columns) || (mode === 'separate' ? cats.length : 1))));
     if (!host.pairRoot) {
       host.shadowRoot.innerHTML = `<style>:host{display:block}ha-card{display:block;box-sizing:border-box;padding:6px;background:var(--ha-card-background,var(--card-background-color,#fff));border-radius:var(--ha-card-border-radius,12px);border:1px solid var(--divider-color,#ddd);font:12px system-ui;color:var(--primary-text-color,#222)}.pair{display:grid;gap:8px;align-items:start}.pair>pixel-cat-home{display:block;min-width:0}.roamers{display:none}</style><ha-card><div class="pair" role="group" aria-label="Pixel cats"></div><div class="roamers"></div></ha-card>`;
       host.pairRoot = host.shadowRoot.querySelector('.pair');
       host.roamerRoot = host.shadowRoot.querySelector('.roamers');
     }
+    // A dock-free shell is only a lifecycle host: it must paint no card at all.
+    host.style.display = mode === 'free' ? 'none' : '';
     host.pairRoot.style.gridTemplateColumns = `repeat(${columns},minmax(0,1fr))`;
     const previous = host.pairChildren || [], nodes = [];
     for (let i = 0; i < cats.length; i++) {
       const el = previous[i] || document.createElement('pixel-cat-home');
       const config = pairConfig(host, cats[i], i);
-      if (docked) {
+      if (mode === 'shared') {
+        // One visible dock: the first resident owns the bed, bowl and controls
+        // and is primary; the others anchor their home to that floor.
         config.dock_slot = i;
         config.dock_slots = cats.length;
         if (i === 0) config.primary_home = cats[i].primary_home ?? true;
         else if (cats.length > 1) {
-          // A dock guest keeps its own actor, clocks and mood but no furniture.
           config.show_home = false;
           config.show_controls = false;
           config.primary_home = false;
         }
+      } else if (mode === 'free') {
+        // Dock-free roaming: each cat returns to an ordinary dashboard surface.
+        config.show_home = cats[i].show_home ?? false;
+        config.show_controls = cats[i].show_controls ?? false;
+        config.primary_home = i === 0 ? cats[i].primary_home ?? true : false;
       }
-      el.dockAnchorOwner = docked && i > 0 ? nodes[0] : null;
+      el.dockAnchorOwner = mode === 'shared' && i > 0 && config.show_home !== true ? nodes[0] : null;
       const signature = JSON.stringify(config);
       // Reuse a resident across host reconnects; only a changed config restarts it.
       if (el.__pairSignature !== signature) { el.__pairSignature = signature; el.setConfig(config); }
       nodes.push(el);
     }
     for (let i = 0; i < nodes.length; i++) {
-      const el = nodes[i], target = docked && i > 0 ? host.roamerRoot : host.pairRoot;
+      const el = nodes[i], target = mode === 'separate' || (mode === 'shared' && i === 0) ? host.pairRoot : host.roamerRoot;
       if (el.parentNode !== target) target.append(el);
       if (host._hass) el.hass = host._hass;
     }
     for (const extra of previous.slice(cats.length)) extra.remove();
     host.pairChildren = nodes;
     host.setAttribute('data-cat-count', String(cats.length));
-    host.setAttribute('data-shared-dock', docked ? 'true' : 'false');
+    host.setAttribute('data-dock-mode', mode);
   };
   window.pixelCatPairV1 = {
     config(host, config) {
@@ -102,6 +112,9 @@
       host.pairCats = cats;
       host.worldScale = 4;
       host.scale = 4;
+      // Dock-free cards occupy no dashboard space of their own.
+      if (dockMode(host) === 'free') host.getCardSize = () => 0;
+      else delete host.getCardSize;
       installHass(host);
       if (host.isConnected) mount(host);
       return true;
