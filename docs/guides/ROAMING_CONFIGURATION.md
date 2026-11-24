@@ -51,12 +51,78 @@ HA picker: **Pixel Cat → Cat companion / Performance monitor**. The guided edi
 | `show_scratching_post: false` | Hide home post; legacy `scratching_posts: false` respected. Below 59 native cells of home width, omit it rather than overlap furniture. |
 | `home_mouse: false` | Disable the mouse for an enabled visible home; spawns beside its post or on the home floor without a post. Requires shared dashboard props. |
 | `igloo_interactions: false` | Disable rare roof perch/shell scratch. |
+| `outline` | `auto` (default), `none`, `black` or `white`; helps very light or dark fur read against the theme. |
+| `floor_shadow: false` | Hide the soft shadow under the cat. |
+| `card_color`, `card_border_color`, `card_radius` | Card shell colours and rounding (`card_radius` clamps to 0–40 px). |
+| `card_background_transparency` | 0–100; 100 makes the card background fully transparent behind the cat. |
+| `include_bed`, `include_bowl` | Furniture opt-outs; bed colour fields become irrelevant when the bed is omitted. |
+| `bowl_primary_color`, `bowl_secondary_color` | Bowl shell and rim colours. |
+| `post_type` | `post` (default) or `tree`; `tree_levels` accepts `1` or `2` and only applies to a tree. |
+| `scratch_debris` | `small` (default), `pixel` or `none`; chooses the bits shed while scratching and climbing. |
 
 
 ```yaml
-bed_style: simple # or igloo
+bed_style: simple # igloo, simple or box
 bed_primary_color: "#aa6627"
 bed_secondary_color: "#964252"
+include_bed: true
+include_bowl: true
+bowl_primary_color: "#f5ad68"
+bowl_secondary_color: "#c95e4b"
+show_scratching_post: true
+post_type: post
+outline: auto
+floor_shadow: true
+card_color: "#fffaf3"
+card_background_transparency: 0
+card_border_color: "#e3d9cb"
+card_radius: 12
+scratch_debris: small
+```
+
+
+## Tune pace, rest and personality
+
+Pace and rest keys are per cat. Leave one out to keep the age-appropriate default; values are native pixel cells per step and milliseconds of rest.
+
+| Setting | Rule |
+| --- | --- |
+| `walk_speed` | Fallback walking speed when no urgency-specific value is set. Clamped to 1–60. |
+| `relaxed_speed`, `casual_speed`, `interested_speed`, `prompted_speed` | Per-urgency speeds: ordinary walking, meandering, investigating and user-requested trips. |
+| `rest_ms`, `home_rest_ms` | Rest on a discovered surface and rest at home. |
+| `idle_frame_ms` | Frame time for idle sequences, minimum 80 ms (default 250); higher is calmer. |
+| `walk_head_bob` | `auto` (varied, default), `cycle` (alternate every gait cycle), `step` (per step), or force `high`/`low`. |
+| `temperament` | `boldness`, `sociability`, `curiosity`, `patience`, each 0–1; missing keys keep the seeded default. |
+| `mood_preset` | `natural`, `playful`, `relaxed` or `alert`; nudges the drifting mood baseline. `mood_seed` repeats a familiar drift. |
+| `settling_mode` | `active`, `default`, `extended` or `custom`; with `custom`, set `settle_after_minutes`, `settled_rest_min_minutes` and `settled_rest_max_minutes`. |
+| `casual_wander` | `false` removes the occasional wander from ordinary walking. |
+| `playful_pounces` | `false` skips the rare unprompted pounce invitation. |
+| `start_paused` | Mount with the cat paused until you press Pause/Resume. |
+
+
+```yaml
+type: custom:pixel-cat-home
+cat_id: calm-cat
+name: Juniper
+color: '#8d7f6a'
+cell_size: 2
+life_stage: senior
+walk_speed: 6
+relaxed_speed: 6
+casual_speed: 4
+interested_speed: 12
+rest_ms: 20000
+home_rest_ms: 24000
+idle_frame_ms: 320
+walk_head_bob: auto
+temperament: {boldness: 0.25, sociability: 0.5, curiosity: 0.35, patience: 0.9}
+mood_preset: relaxed
+mood_seed: 4711
+settling_mode: custom
+settle_after_minutes: 8
+settled_rest_min_minutes: 12
+settled_rest_max_minutes: 25
+casual_wander: false
 ```
 
 
@@ -79,7 +145,7 @@ startle_followups: true
 ```
 
 
-Other optional switches: `toy_carrying`, `bowl_eating`, `post_rest_behaviour`, `post_meal_behaviour`, `draggable`, `horizontal_apex`. Set false to opt out. These controls do not imply care obligations or guaranteed interactions. Use [detailed contracts](../FEATURE_DETAILS.md) for eligibility/contact/interruption rules.
+Other optional switches: `toy_carrying`, `toy_hunting`, `bowl_eating`, `post_rest_behaviour`, `post_meal_behaviour`, `draggable`, `horizontal_apex`, `click_attention`, `local_exploration`, `point_routes`, `third_party_awareness`, `exertion_behaviour`, `effects`, `post_wiggle`, `card_climbing`, `native_vertical_surfaces`, `use_surface_candidates`. Set false to opt out. `social_sight_cells` (24–240, default 110) tunes how far social noticing reaches; `effects: false` also silences scratching debris and particles. These controls do not imply care obligations or guaranteed interactions. Use [detailed contracts](../FEATURE_DETAILS.md) for eligibility/contact/interruption rules.
 
 ## Chasing
 
@@ -109,12 +175,29 @@ cat_id: quiet-companion
 name: Nori
 color: '#414b55'
 cell_size: 2
+life_stage: adult
 show_home: true
+show_controls: false
+include_bed: true
+bed_style: simple
+bed_primary_color: '#8a94a3'
+bed_secondary_color: '#d8dde3'
+include_bowl: true
+show_scratching_post: true
+outline: auto
+floor_shadow: true
+casual_speed: 6
+relaxed_speed: 9
+rest_ms: 16000
+home_rest_ms: 22000
+idle_frame_ms: 280
+temperament: {boldness: 0.3, curiosity: 0.4, patience: 0.8}
+mood_preset: relaxed
+casual_wander: false
+click_attention: true
 debug_labels: false
 debug_names: false
 debug_mood: false
-casual_speed: 6
-relaxed_speed: 9
 ```
 
 
@@ -129,19 +212,48 @@ cards:
     cat_id: miso
     name: Miso
     color: '#ad6c2d'
+    cell_size: 2
+    bed_style: igloo
+    bed_primary_color: '#aa6627'
+    bed_secondary_color: '#964252'
     mood_behaviour: true
+    mood_preset: playful
+    mood_seed: 12
     social_behaviour: true
     interaction_behaviour: true
+    dashboard_props: true
+    toy_mice: 2
+    toy_balls: 1
+    prop_reactions: true
+    landing_reactions: true
+    startle_followups: true
     shared_home_surfaces: true
+    relaxed_speed: 12
+    temperament: {curiosity: 0.9, boldness: 0.7, patience: 0.3}
     debug_labels: false
   - type: custom:pixel-cat-home
     cat_id: nori
     name: Nori
     color: '#414b55'
+    cell_size: 2
+    bed_style: simple
+    bed_primary_color: '#8a94a3'
+    bed_secondary_color: '#d8dde3'
     mood_behaviour: true
+    mood_preset: relaxed
+    mood_seed: 7
     social_behaviour: true
     interaction_behaviour: true
+    dashboard_props: true
+    toy_mice: 2
+    toy_balls: 1
+    prop_reactions: true
+    landing_reactions: true
+    startle_followups: true
     shared_home_surfaces: true
+    relaxed_speed: 6
+    rest_ms: 20000
+    temperament: {curiosity: 0.3, boldness: 0.2, patience: 0.9}
     debug_labels: false
 ```
 
@@ -156,24 +268,121 @@ The card entry supplies only `cell_size`, card chrome and the feature switches (
 type: custom:pixel-cat-home
 cell_size: 2
 mood_behaviour: true
+mood_preset: playful
+mood_seed: 21
 social_behaviour: true
 interaction_behaviour: true
+dashboard_props: true
+toy_mice: 2
+click_attention: true
 cats:
   - cat_id: miso
     name: Miso
     color: '#ad6c2d'
     temperament: {boldness: 0.9, curiosity: 1, patience: 0.2}
     relaxed_speed: 16
+    casual_speed: 9
+    interested_speed: 22
     rest_ms: 4000
+    home_rest_ms: 5000
+    casual_wander: false
+    playful_pounces: true
   - cat_id: nori
     name: Nori
     color: '#414b55'
     temperament: {boldness: 0.2, curiosity: 0.2, patience: 1}
     relaxed_speed: 5
+    casual_speed: 4
     rest_ms: 30000
+    home_rest_ms: 34000
+    casual_wander: true
+    playful_pounces: false
 ```
 
 Each resident keeps independent clocks, routes, mood, pace and rest profile, and the pair uses the normal same-view social rules. `shared_dock: true` gives the card one dock instead: the first entry owns the bed, bowl and controls and is primary, later entries draw no furniture, keep their own clocks and mood, and return home to the same floor. `shared_dock: false` gives every entry its own dock again; `columns` then controls that grid and defaults to the number of cats.
+
+### One shared dock
+
+```yaml
+type: custom:pixel-cat-home
+cell_size: 2
+shared_dock: true
+mood_behaviour: true
+social_behaviour: true
+interaction_behaviour: true
+cats:
+  - cat_id: miso
+    name: Miso
+    color: '#ad6c2d'
+  - cat_id: nori
+    name: Nori
+    color: '#414b55'
+    temperament: {boldness: 0.4, curiosity: 0.5, patience: 0.7}
+```
+
+The first entry keeps the bed, bowl and controls; later entries own no furniture but keep their own clocks. Clicking those controls only affects the first cat. For one dock per entry use `shared_dock: false` with `columns: 2`:
+
+```yaml
+type: custom:pixel-cat-home
+cell_size: 2
+shared_dock: false
+columns: 2
+cats:
+  - cat_id: miso
+    name: Miso
+  - cat_id: nori
+    name: Nori
+    bed_style: simple
+```
+
+### Climbing, tree and toys
+
+```yaml
+type: custom:pixel-cat-home
+cat_id: climb-cat
+name: Pip
+cell_size: 2
+show_scratching_post: true
+post_type: tree
+tree_levels: 2
+scratch_debris: small
+card_climbing: true
+native_vertical_surfaces: true
+use_surface_candidates: true
+climb_speed: 2
+climb_release_drop: 36
+post_wiggle: true
+dashboard_props: true
+toy_mice: 3
+toy_balls: 2
+toy_carrying: true
+toy_hunting: true
+social_behaviour: true
+interaction_behaviour: true
+```
+
+`climb_speed` clamps to 0.25–3 and `climb_release_drop` to 8–100 native cells. `native_vertical_surfaces` enables scratch faces on ordinary cards and needs social and interaction behaviour; `use_surface_candidates: false` keeps interior card candidates out of the route graph.
+
+### Debugging routes and surfaces
+
+```yaml
+type: custom:pixel-cat-home
+cat_id: debug-cat
+name: Debug
+show_controls: true
+debug_labels: true
+debug_name_below: true
+debug_action_below: true
+debug_names: false
+debug_action_above: false
+debug_mood: true
+debug_surfaces: true
+debug_paths: true
+debug_pois: true
+debug_vertical_surfaces: true
+```
+
+The debug toggles draw temporary overlays only; they do not change routes, contacts or saved settings. Turn them off before screenshots or everyday use. [Diagnostic guide](CAT_DEBUG.md) explains the reports.
 
 ## Debug and performance
 
