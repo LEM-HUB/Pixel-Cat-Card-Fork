@@ -21,7 +21,7 @@ const catScrollLayout={
  shift(a){
   const state=a.scrollTranslation;a.scrollTranslation=null;
   if(!state||!a.support||!a.home?.rectSnapshot||!a.surfaces?.length)return false;
-  const dock=a.config?.show_home===false?a.home.el:a.shadowRoot.querySelector('.dock');if(!dock)return false;
+  const dock=a.home?.rectNode||(a.config?.show_home===false?a.home.el:a.shadowRoot.querySelector('.dock'));if(!dock)return false;
   const r=catScrollRect(state,dock),old=a.home.rectSnapshot,dx=r.left-old.left,dy=r.top-old.top,root=catScrollRect(state,a.root);
   if(![dx,dy].every(Number.isFinite)||!a.worldRect||Math.abs(root.width-a.worldRect.width)>.5||Math.abs(root.height-a.worldRect.height)>.5)return false;
   for(const s of a.surfaces){const node=s.rectNode||(s.home?dock:s.el),rect=catScrollRect(state,node),snapshot=s.rectSnapshot;if(!s.el?.isConnected||node?.isConnected===false||!snapshot||['width','height'].some(k=>Math.abs(rect[k]-snapshot[k])>.5)||Math.abs(rect.left-snapshot.left-dx)>.5||Math.abs(rect.top-snapshot.top-dy)>.5)return false;}

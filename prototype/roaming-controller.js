@@ -559,9 +559,11 @@ class PixelCatHome extends HTMLElement {
     const oldSupport=this.support,oldSurfaces=this.surfaces||[],oldById=new Map(oldSurfaces.map(s=>[s.id,s]));
     this.root = this.worldRoot();
     window.pixelCatTreeV1?.mount(this);
-    const d = this.shadowRoot.querySelector('.dock').getBoundingClientRect(), s = this.scale;
+    // A shared-dock resident measures the owning resident's dock; its own dock
+    // stays hidden, so every cat in the card returns to the same floor.
+    const anchorDock=this.dockAnchorOwner?.shadowRoot?.querySelector?.('.dock'),dockNode=anchorDock||this.shadowRoot.querySelector('.dock'),d=dockNode.getBoundingClientRect(),s=this.scale;
     if(!this.support&&this.config.show_home!==false&&(!(d.width>0)||!(d.height>0))){this.waitingForPlacement=true;this.needsMeasure=true;this.layer.style.visibility='hidden';return;}this.waitingForPlacement=false;
-    this.home = {id:'home',label:'Bed & bowl',el:this,rectNode:this.shadowRoot.querySelector('.dock'),left:d.left+4,right:d.right-4,top:d.bottom,home:true,scale:this.worldScale||s,rectSnapshot:{left:d.left,top:d.top,width:d.width,height:d.height}};
+    this.home = {id:'home',label:anchorDock?'Shared dock':'Bed & bowl',el:this,rectNode:dockNode,left:d.left+4,right:d.right-4,top:d.bottom,home:true,scale:this.worldScale||s,rectSnapshot:{left:d.left,top:d.top,width:d.width,height:d.height}};
     this.size = 24*s;
     const rootRect = this.root?.getBoundingClientRect();
     this.worldRect = rootRect || d;
@@ -583,7 +585,7 @@ class PixelCatHome extends HTMLElement {
       .filter(({el,r})=>el.isConnected && r.width>=this.size/2+20 && r.height>=30);
     this.verticalCardRects=rects;const seen = new Set();
     this.rejected=[];this.surfaceCandidates=[];this.surfaceAudit=[];this.matchedRules=0;
-    this.surfaces = this.config.show_home===false?[]:[this.home];
+    this.surfaces = this.config.show_home===false&&!anchorDock?[]:[this.home];
     // Required home supports precede shared, uncapped discovery.
     window.pixelCatSetupV1?.surfaces?.(this);
     for(const {el,r} of rects) {
@@ -609,7 +611,7 @@ class PixelCatHome extends HTMLElement {
     window.pixelCatMouthV1?.surfaces?.(this);
     for(const surface of this.surfaces) {surface.narrow=surface.right-surface.left<this.size;surface.min=Math.ceil((surface.left-(surface.narrow?6*s:0))/s)*s;surface.max=Math.floor((surface.right-(surface.narrow?18*s:this.size))/s)*s;if(surface.narrow)surface.poses=['perch','lookdown'];const previous=oldById.get(surface.id);surface.roamFractions=previous?.roamFractions||[.1+Math.random()*.8,.1+Math.random()*.8,.1+Math.random()*.8];surface.roamPoints=surface.home||surface.narrow||surface.max-surface.min<12*s?[]:surface.roamFractions.map((u,i)=>({id:'roam-'+i,x:cellSnap(surface.min+(surface.max-surface.min)*u,s),weight:1,label:'Wander '+(i+1)}));surface.propPoints=previous?.propPoints||[];surface.inspectionPoints=inspectionPointsFor(surface,surface.inspectionTargets||[],s);if(surface.bed){surface.narrow=false;surface.min=surface.max=cellSnap((surface.left+surface.right-this.size)/2,s);surface.poses=['alertLying','sit','sithead','loaf','sleep','clean','scratch','yawn'];}surface.points=restingPoints(surface);}
     window.pixelCatHomeLifeV1?.fitRoofs(this,CAT_ART);this.surfaces=this.surfaces.filter(s=>s.max>=s.min);if(!this.surfaces.includes(this.bedSurface))this.bedSurface=null;this.surfaceCounts={eligible:this.surfaces.length,candidates:this.surfaceCandidates.length,rejected:this.rejected.length};window.pixelCatVerticalScratchV1?.reconcile(this);
-    if(this.config.show_home===false){this.home=null;this.waitingForSurface=true;window.pixelCatHiddenHomeV1?.select(this);}
+    if(this.config.show_home===false&&!anchorDock){this.home=null;this.waitingForSurface=true;window.pixelCatHiddenHomeV1?.select(this);}
     this.needsMeasure = false;
     if(this.root)this.observer?.observe(this.root);for(const {el}of rects)this.observer?.observe(el);
     this.reconcileLayout(oldSupport,oldSurfaces,performance.now());window.pixelCatExplorationV1?.observe(this,performance.now());
@@ -620,7 +622,10 @@ class PixelCatHome extends HTMLElement {
   reconcileLayout(oldSupport,oldSurfaces,now,uniformScroll=false) {
     if(window.pixelCatLayoutV1?.repair(this,oldSupport,now))return;
     if(this.config?.show_home===false&&!this.home){this.stranded=true;this.noPathMessage='Waiting for a suitable dashboard surface';return;}
-    if(!oldSupport){this.support=this.home;this.x=Math.min(this.home.max,this.home.min+20*(this.home.scale||this.scale));this.y=this.home.top;this.motion=null;this.route=[];this.finishing=false;this.idle=null;this.deadline=now+restDuration(this.config,true,this);this.stranded=false;return;}
+    if(!oldSupport){this.support=this.home;
+      // Docked residents start in distinct slots of the shared floor.
+      const slots=Math.max(1,Math.min(8,Math.round(Number(this.config.dock_slots)||1))),slot=Math.max(0,Math.min(slots-1,Math.round(Number(this.config.dock_slot)||0))),span=this.home.max-this.home.min;
+      this.x=Math.max(this.home.min,Math.min(this.home.max,this.home.min+(slots>1?span*(slot+.5)/slots:20*(this.home.scale||this.scale))));this.y=this.home.top;this.motion=null;this.route=[];this.finishing=false;this.idle=null;this.deadline=now+restDuration(this.config,true,this);this.stranded=false;return;}
     const next=this.surfaces.find(s=>s.id===oldSupport.id),target=this.motion&&this.surfaces.find(s=>s.id===this.motion.target.id);
     this.stranded=!next||!!(this.motion&&!target);if(this.stranded){this.noPathMessage='Surface unavailable · waiting for layout or Reset home';return;}
     const dx=next.left-oldSupport.left,dy=next.top-oldSupport.top;this.support=next;this.x+=dx;this.y+=dy;
