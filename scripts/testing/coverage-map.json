@@ -43,7 +43,7 @@
     {
       "id": "props-beds-and-carrying",
       "feature": "Toys, claims, mouth/paw contact, carrying, beds, box and tree furniture",
-      "suitePattern": "^test-(dashboard-props|ball-interactions|mouth-affordances|prop-(reference|pickup-metadata|colour-themes)|home-.*|hidden-home|cat-(box-bed|bed-visits|primary-home)|scratch-invitations|idle-mouse-bat|contact-effects|casual-scratch-reactions|igloo-mask|bat-variety)\\.mjs$",
+      "suitePattern": "^test-(dashboard-props|ball-interactions|mouth-affordances|prop-(reference|pickup-metadata|colour-themes)|home-.*|hidden-home|cat-(pair-host|box-bed|bed-visits|primary-home)|scratch-invitations|idle-mouse-bat|contact-effects|casual-scratch-reactions|igloo-mask|bat-variety)\\.mjs$",
       "browser": ["bundle"],
       "openChecks": ["Automate existing carrying lab journey through turns/reflow/drop", "Browser box-occupancy and interrupted-entry journey"]
     },
