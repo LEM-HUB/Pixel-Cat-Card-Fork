@@ -36,7 +36,7 @@
     {
       "id": "perception-and-social",
       "feature": "Gaze, mood, optional interactions, chasing, life stages, rest and reactions",
-      "suitePattern": "^test-(cat-(decisions|interactions|dashboard-chase|shelf-ambush|mood|post-rest|behaviour-refinements|commands)|gaze-.*|quiet-behaviour|behaviour-.*|life-stages|settling|local-exploration|prop-disturbances|startle-.*|alert-lying)\\.mjs$",
+      "suitePattern": "^test-(card-click-reactions|cat-(decisions|interactions|dashboard-chase|shelf-ambush|mood|post-rest|behaviour-refinements|commands)|gaze-.*|quiet-behaviour|behaviour-.*|life-stages|settling|local-exploration|prop-disturbances|startle-.*|alert-lying)\\.mjs$",
       "browser": ["bundle", "motionPreference", "edgeScratch", "edgeRemoval"],
       "openChecks": ["Broader seeded social/geometry combinations", "Adult/senior profile calibration", "Runtime frequencies are distributions, not guaranteed participation"]
     },
