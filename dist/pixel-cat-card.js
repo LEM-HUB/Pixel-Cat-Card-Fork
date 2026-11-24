@@ -2288,7 +2288,7 @@ state.actors.add(a);a.scrollTranslation=state;
 shift(a){
 const state=a.scrollTranslation;a.scrollTranslation=null;
 if(!state||!a.support||!a.home?.rectSnapshot||!a.surfaces?.length)return false;
-const dock=a.config?.show_home===false?a.home.el:a.shadowRoot.querySelector('.dock');if(!dock)return false;
+const dock=a.home?.rectNode||(a.config?.show_home===false?a.home.el:a.shadowRoot.querySelector('.dock'));if(!dock)return false;
 const r=catScrollRect(state,dock),old=a.home.rectSnapshot,dx=r.left-old.left,dy=r.top-old.top,root=catScrollRect(state,a.root);
 if(![dx,dy].every(Number.isFinite)||!a.worldRect||Math.abs(root.width-a.worldRect.width)>.5||Math.abs(root.height-a.worldRect.height)>.5)return false;
 for(const s of a.surfaces){const node=s.rectNode||(s.home?dock:s.el),rect=catScrollRect(state,node),snapshot=s.rectSnapshot;if(!s.el?.isConnected||node?.isConnected===false||!snapshot||['width','height'].some(k=>Math.abs(rect[k]-snapshot[k])>.5)||Math.abs(rect.left-snapshot.left-dx)>.5||Math.abs(rect.top-snapshot.top-dy)>.5)return false;}
@@ -3464,9 +3464,9 @@ if(window.pixelCatScrollV1?.shift(this))return;
 const oldSupport=this.support,oldSurfaces=this.surfaces||[],oldById=new Map(oldSurfaces.map(s=>[s.id,s]));
 this.root = this.worldRoot();
 window.pixelCatTreeV1?.mount(this);
-const d = this.shadowRoot.querySelector('.dock').getBoundingClientRect(), s = this.scale;
+const anchorDock=this.dockAnchorOwner?.shadowRoot?.querySelector?.('.dock'),dockNode=anchorDock||this.shadowRoot.querySelector('.dock'),d=dockNode.getBoundingClientRect(),s=this.scale;
 if(!this.support&&this.config.show_home!==false&&(!(d.width>0)||!(d.height>0))){this.waitingForPlacement=true;this.needsMeasure=true;this.layer.style.visibility='hidden';return;}this.waitingForPlacement=false;
-this.home = {id:'home',label:'Bed & bowl',el:this,rectNode:this.shadowRoot.querySelector('.dock'),left:d.left+4,right:d.right-4,top:d.bottom,home:true,scale:this.worldScale||s,rectSnapshot:{left:d.left,top:d.top,width:d.width,height:d.height}};
+this.home = {id:'home',label:anchorDock?'Shared dock':'Bed & bowl',el:this,rectNode:dockNode,left:d.left+4,right:d.right-4,top:d.bottom,home:true,scale:this.worldScale||s,rectSnapshot:{left:d.left,top:d.top,width:d.width,height:d.height}};
 this.size = 24*s;
 const rootRect = this.root?.getBoundingClientRect();
 this.worldRect = rootRect || d;
@@ -3488,7 +3488,7 @@ const rects = candidates.filter(el => sharedHomeSurfaceAllowed(el,this.config)&&
 .filter(({el,r})=>el.isConnected && r.width>=this.size/2+20 && r.height>=30);
 this.verticalCardRects=rects;const seen = new Set();
 this.rejected=[];this.surfaceCandidates=[];this.surfaceAudit=[];this.matchedRules=0;
-this.surfaces = this.config.show_home===false?[]:[this.home];
+this.surfaces = this.config.show_home===false&&!anchorDock?[]:[this.home];
 window.pixelCatSetupV1?.surfaces?.(this);
 for(const {el,r} of rects) {
 const key = el;
@@ -3513,7 +3513,7 @@ this.surfaces.push(measured);audit.accepted.push({id:measured.id,source:surface.
 window.pixelCatMouthV1?.surfaces?.(this);
 for(const surface of this.surfaces) {surface.narrow=surface.right-surface.left<this.size;surface.min=Math.ceil((surface.left-(surface.narrow?6*s:0))/s)*s;surface.max=Math.floor((surface.right-(surface.narrow?18*s:this.size))/s)*s;if(surface.narrow)surface.poses=['perch','lookdown'];const previous=oldById.get(surface.id);surface.roamFractions=previous?.roamFractions||[.1+Math.random()*.8,.1+Math.random()*.8,.1+Math.random()*.8];surface.roamPoints=surface.home||surface.narrow||surface.max-surface.min<12*s?[]:surface.roamFractions.map((u,i)=>({id:'roam-'+i,x:cellSnap(surface.min+(surface.max-surface.min)*u,s),weight:1,label:'Wander '+(i+1)}));surface.propPoints=previous?.propPoints||[];surface.inspectionPoints=inspectionPointsFor(surface,surface.inspectionTargets||[],s);if(surface.bed){surface.narrow=false;surface.min=surface.max=cellSnap((surface.left+surface.right-this.size)/2,s);surface.poses=['alertLying','sit','sithead','loaf','sleep','clean','scratch','yawn'];}surface.points=restingPoints(surface);}
 window.pixelCatHomeLifeV1?.fitRoofs(this,CAT_ART);this.surfaces=this.surfaces.filter(s=>s.max>=s.min);if(!this.surfaces.includes(this.bedSurface))this.bedSurface=null;this.surfaceCounts={eligible:this.surfaces.length,candidates:this.surfaceCandidates.length,rejected:this.rejected.length};window.pixelCatVerticalScratchV1?.reconcile(this);
-if(this.config.show_home===false){this.home=null;this.waitingForSurface=true;window.pixelCatHiddenHomeV1?.select(this);}
+if(this.config.show_home===false&&!anchorDock){this.home=null;this.waitingForSurface=true;window.pixelCatHiddenHomeV1?.select(this);}
 this.needsMeasure = false;
 if(this.root)this.observer?.observe(this.root);for(const {el}of rects)this.observer?.observe(el);
 this.reconcileLayout(oldSupport,oldSurfaces,performance.now());window.pixelCatExplorationV1?.observe(this,performance.now());
@@ -3524,7 +3524,9 @@ this.setAttribute('data-ledges',String(this.surfaces.length-(this.config.show_ho
 reconcileLayout(oldSupport,oldSurfaces,now,uniformScroll=false) {
 if(window.pixelCatLayoutV1?.repair(this,oldSupport,now))return;
 if(this.config?.show_home===false&&!this.home){this.stranded=true;this.noPathMessage='Waiting for a suitable dashboard surface';return;}
-if(!oldSupport){this.support=this.home;this.x=Math.min(this.home.max,this.home.min+20*(this.home.scale||this.scale));this.y=this.home.top;this.motion=null;this.route=[];this.finishing=false;this.idle=null;this.deadline=now+restDuration(this.config,true,this);this.stranded=false;return;}
+if(!oldSupport){this.support=this.home;
+const slots=Math.max(1,Math.min(8,Math.round(Number(this.config.dock_slots)||1))),slot=Math.max(0,Math.min(slots-1,Math.round(Number(this.config.dock_slot)||0))),span=this.home.max-this.home.min;
+this.x=Math.max(this.home.min,Math.min(this.home.max,this.home.min+(slots>1?span*(slot+.5)/slots:20*(this.home.scale||this.scale))));this.y=this.home.top;this.motion=null;this.route=[];this.finishing=false;this.idle=null;this.deadline=now+restDuration(this.config,true,this);this.stranded=false;return;}
 const next=this.surfaces.find(s=>s.id===oldSupport.id),target=this.motion&&this.surfaces.find(s=>s.id===this.motion.target.id);
 this.stranded=!next||!!(this.motion&&!target);if(this.stranded){this.noPathMessage='Surface unavailable · waiting for layout or Reset home';return;}
 const dx=next.left-oldSupport.left,dy=next.top-oldSupport.top;this.support=next;this.x+=dx;this.y+=dy;
@@ -4785,6 +4787,7 @@ window.pixelCatBoxV1={
     for (const child of host.pairChildren || []) child.remove();
     host.pairChildren = [];
     host.pairRoot = null;
+    host.roamerRoot = null;
     host.shadowRoot.innerHTML = '';
     delete host.hass;
     delete host.__pairHass;
@@ -4807,25 +4810,47 @@ window.pixelCatBoxV1={
     const cats = host.pairCats || [];
     if (!cats.length) return;
     installHass(host);
-    const columns = Math.max(1, Math.min(4, Math.round(Number(host.config.columns) || cats.length)));
+    // One visible dock per card by default: the first resident owns the bed,
+    // bowl and controls and is the primary home; the others anchor their home
+    // to that dock instead of drawing a second one.
+    const docked = host.config.shared_dock !== false && (cats[0].show_home ?? host.config.show_home ?? true) !== false;
+    const columns = Math.max(1, Math.min(4, Math.round(Number(host.config.columns) || (docked ? 1 : cats.length))));
     if (!host.pairRoot) {
-      host.shadowRoot.innerHTML = `<style>:host{display:block}ha-card{display:block;box-sizing:border-box;padding:6px;background:var(--ha-card-background,var(--card-background-color,#fff));border-radius:var(--ha-card-border-radius,12px);border:1px solid var(--divider-color,#ddd);font:12px system-ui;color:var(--primary-text-color,#222)}.pair{display:grid;gap:8px;align-items:start}.pair>pixel-cat-home{display:block;min-width:0}</style><ha-card><div class="pair" role="group" aria-label="Pixel cats"></div></ha-card>`;
+      host.shadowRoot.innerHTML = `<style>:host{display:block}ha-card{display:block;box-sizing:border-box;padding:6px;background:var(--ha-card-background,var(--card-background-color,#fff));border-radius:var(--ha-card-border-radius,12px);border:1px solid var(--divider-color,#ddd);font:12px system-ui;color:var(--primary-text-color,#222)}.pair{display:grid;gap:8px;align-items:start}.pair>pixel-cat-home{display:block;min-width:0}.roamers{display:none}</style><ha-card><div class="pair" role="group" aria-label="Pixel cats"></div><div class="roamers"></div></ha-card>`;
       host.pairRoot = host.shadowRoot.querySelector('.pair');
+      host.roamerRoot = host.shadowRoot.querySelector('.roamers');
     }
     host.pairRoot.style.gridTemplateColumns = `repeat(${columns},minmax(0,1fr))`;
-    const nodes = [...host.pairRoot.children].filter(el => el.localName === 'pixel-cat-home');
+    const previous = host.pairChildren || [], nodes = [];
     for (let i = 0; i < cats.length; i++) {
-      const el = nodes[i] || document.createElement('pixel-cat-home');
+      const el = previous[i] || document.createElement('pixel-cat-home');
       const config = pairConfig(host, cats[i], i);
+      if (docked) {
+        config.dock_slot = i;
+        config.dock_slots = cats.length;
+        if (i === 0) config.primary_home = cats[i].primary_home ?? true;
+        else if (cats.length > 1) {
+          // A dock guest keeps its own actor, clocks and mood but no furniture.
+          config.show_home = false;
+          config.show_controls = false;
+          config.primary_home = false;
+        }
+      }
+      el.dockAnchorOwner = docked && i > 0 ? nodes[0] : null;
       const signature = JSON.stringify(config);
       // Reuse a resident across host reconnects; only a changed config restarts it.
       if (el.__pairSignature !== signature) { el.__pairSignature = signature; el.setConfig(config); }
-      if (!el.isConnected) host.pairRoot.append(el);
+      nodes.push(el);
+    }
+    for (let i = 0; i < nodes.length; i++) {
+      const el = nodes[i], target = docked && i > 0 ? host.roamerRoot : host.pairRoot;
+      if (el.parentNode !== target) target.append(el);
       if (host._hass) el.hass = host._hass;
     }
-    for (const extra of nodes.slice(cats.length)) extra.remove();
-    host.pairChildren = [...host.pairRoot.children].filter(el => el.localName === 'pixel-cat-home');
+    for (const extra of previous.slice(cats.length)) extra.remove();
+    host.pairChildren = nodes;
     host.setAttribute('data-cat-count', String(cats.length));
+    host.setAttribute('data-shared-dock', docked ? 'true' : 'false');
   };
   window.pixelCatPairV1 = {
     config(host, config) {
@@ -5052,7 +5077,7 @@ window.pixelCatDashboardChaseV1={
 
 })();
 
-window.pixelCatCardRelease=Object.freeze({version:"1.1.0",sourceHash:"9cc33595e2b6730e09a2237cbc93dae1d78dc64f4555b517b5190e6758134276"});
+window.pixelCatCardRelease=Object.freeze({version:"1.1.0",sourceHash:"315178cb1dca9ea27a00e874710fbb29b671a0c9a8eb460f5e5ff6ae845c65b9"});
 const card=window.customCards?.find(c=>c.type==='pixel-cat-home');if(card){card.name='Pixel Cat Card';card.documentationURL='https://github.com/Future-Surfer/Pixel-Cat-Card#readme';}
 console.info('Pixel Cat Card',"1.1.0");
 })();

@@ -22,6 +22,7 @@
     for (const child of host.pairChildren || []) child.remove();
     host.pairChildren = [];
     host.pairRoot = null;
+    host.roamerRoot = null;
     host.shadowRoot.innerHTML = '';
     delete host.hass;
     delete host.__pairHass;
@@ -44,25 +45,47 @@
     const cats = host.pairCats || [];
     if (!cats.length) return;
     installHass(host);
-    const columns = Math.max(1, Math.min(4, Math.round(Number(host.config.columns) || cats.length)));
+    // One visible dock per card by default: the first resident owns the bed,
+    // bowl and controls and is the primary home; the others anchor their home
+    // to that dock instead of drawing a second one.
+    const docked = host.config.shared_dock !== false && (cats[0].show_home ?? host.config.show_home ?? true) !== false;
+    const columns = Math.max(1, Math.min(4, Math.round(Number(host.config.columns) || (docked ? 1 : cats.length))));
     if (!host.pairRoot) {
-      host.shadowRoot.innerHTML = `<style>:host{display:block}ha-card{display:block;box-sizing:border-box;padding:6px;background:var(--ha-card-background,var(--card-background-color,#fff));border-radius:var(--ha-card-border-radius,12px);border:1px solid var(--divider-color,#ddd);font:12px system-ui;color:var(--primary-text-color,#222)}.pair{display:grid;gap:8px;align-items:start}.pair>pixel-cat-home{display:block;min-width:0}</style><ha-card><div class="pair" role="group" aria-label="Pixel cats"></div></ha-card>`;
+      host.shadowRoot.innerHTML = `<style>:host{display:block}ha-card{display:block;box-sizing:border-box;padding:6px;background:var(--ha-card-background,var(--card-background-color,#fff));border-radius:var(--ha-card-border-radius,12px);border:1px solid var(--divider-color,#ddd);font:12px system-ui;color:var(--primary-text-color,#222)}.pair{display:grid;gap:8px;align-items:start}.pair>pixel-cat-home{display:block;min-width:0}.roamers{display:none}</style><ha-card><div class="pair" role="group" aria-label="Pixel cats"></div><div class="roamers"></div></ha-card>`;
       host.pairRoot = host.shadowRoot.querySelector('.pair');
+      host.roamerRoot = host.shadowRoot.querySelector('.roamers');
     }
     host.pairRoot.style.gridTemplateColumns = `repeat(${columns},minmax(0,1fr))`;
-    const nodes = [...host.pairRoot.children].filter(el => el.localName === 'pixel-cat-home');
+    const previous = host.pairChildren || [], nodes = [];
     for (let i = 0; i < cats.length; i++) {
-      const el = nodes[i] || document.createElement('pixel-cat-home');
+      const el = previous[i] || document.createElement('pixel-cat-home');
       const config = pairConfig(host, cats[i], i);
+      if (docked) {
+        config.dock_slot = i;
+        config.dock_slots = cats.length;
+        if (i === 0) config.primary_home = cats[i].primary_home ?? true;
+        else if (cats.length > 1) {
+          // A dock guest keeps its own actor, clocks and mood but no furniture.
+          config.show_home = false;
+          config.show_controls = false;
+          config.primary_home = false;
+        }
+      }
+      el.dockAnchorOwner = docked && i > 0 ? nodes[0] : null;
       const signature = JSON.stringify(config);
       // Reuse a resident across host reconnects; only a changed config restarts it.
       if (el.__pairSignature !== signature) { el.__pairSignature = signature; el.setConfig(config); }
-      if (!el.isConnected) host.pairRoot.append(el);
+      nodes.push(el);
+    }
+    for (let i = 0; i < nodes.length; i++) {
+      const el = nodes[i], target = docked && i > 0 ? host.roamerRoot : host.pairRoot;
+      if (el.parentNode !== target) target.append(el);
       if (host._hass) el.hass = host._hass;
     }
-    for (const extra of nodes.slice(cats.length)) extra.remove();
-    host.pairChildren = [...host.pairRoot.children].filter(el => el.localName === 'pixel-cat-home');
+    for (const extra of previous.slice(cats.length)) extra.remove();
+    host.pairChildren = nodes;
     host.setAttribute('data-cat-count', String(cats.length));
+    host.setAttribute('data-shared-dock', docked ? 'true' : 'false');
   };
   window.pixelCatPairV1 = {
     config(host, config) {
