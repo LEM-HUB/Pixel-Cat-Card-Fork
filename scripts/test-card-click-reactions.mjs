@@ -53,17 +53,37 @@ const sleeping=counted({playfulness:.1,sleepiness:.9,alertness:.1},{pose:'sleep'
 assert.equal(sleeping.startle,undefined,'A sleeping cat never startles');
 assert.ok(sleeping.ignore>sleeping.visit,'A sleeping cat mostly stays put: '+JSON.stringify(sleeping));
 
-const card={localName:'ha-card',parentElement:{}};
+const root={},card={localName:'ha-card',parentElement:{}},otherCard={localName:'ha-card',parentElement:{}};
 const surface={id:'card:floor',el:card,left:100,right:400,min:100,max:352,top:300};
-const wired={config:{},root:{},scale:2,x:200,y:300,userHeld:false,idle:null,surfaces:[surface],home:{},nextClickReactionAt:0,
-  blocked:()=>false,pathTo:()=>[],setAttribute(){},ensureMood:()=>({values:{playfulness:.9,sleepiness:0,alertness:0},random:()=>0}),requestVisit:(...args)=>wired.visits.push(args),visits:[]};
-const event={button:0,clientX:230,clientY:300,composedPath:()=>[card,wired.root]};
-const stubs={cardOwnerFor:()=>card.parentElement,clickDestination:()=>destination,attentionWinner:cats=>cats[0],CAT_OWNERS:new Map([[wired,{root:wired.root}]])};
-attention.call(wired,event,stubs);
-assert.equal(wired.visits.length,1,'A card click reaches the nearest cat');
-attention.call(wired,event,stubs);
-assert.equal(wired.visits.length,1,'Rapid repeat clicks are not answered twice');
-wired.config.click_attention=false;
-attention.call(wired,{...event,clientX:240},stubs);
-assert.equal(wired.visits.length,1,'click_attention: false disables replies');
-console.log('PASS: dashboard clicks reach the nearest cat, which independently investigates, glances, flinches or ignores based on mood, temperament and its own commitments; repeat clicks and the opt-out are honoured.');
+const ownerOf=new Map([[card,card.parentElement],[otherCard,otherCard.parentElement]]),cardOwnerFor=el=>ownerOf.get(el)||el,nearest=cats=>cats.slice().sort((a,b)=>Math.hypot(230-a.x,a.y-300)-Math.hypot(230-b.x,b.y-300))[0];
+const makeWired=overrides=>{const calls={visits:[],attrs:{}};const cat={config:{},root,scale:2,x:200,y:300,userHeld:false,idle:null,active:true,isConnected:true,support:null,surfaces:[surface],home:{},nextClickReactionAt:0,
+  blocked:()=>false,pathTo:()=>[],setAttribute:(k,v)=>calls.attrs[k]=v,ensureMood:()=>({values:{playfulness:.9,sleepiness:0,alertness:0},random:()=>0}),requestVisit:(...args)=>calls.visits.push(args),...overrides};return {cat,calls};};
+const click=(cat,extra={})=>attention.call(cat,{button:0,clientX:230,clientY:300,composedPath:()=>[card,root]},{cardOwnerFor,clickDestination:()=>destination,attentionWinner:cats=>cats[0],CAT_OWNERS:new Map([[cat,{root}]]),...extra});
+const wired=makeWired();
+click(wired.cat);
+assert.equal(wired.calls.visits.length,1,'A card click reaches the cat');
+assert.equal(wired.calls.attrs['data-click-reason'],'reachable');
+click(wired.cat);
+assert.equal(wired.calls.visits.length,1,'Rapid repeat clicks are not answered twice');
+wired.cat.config.click_attention=false;
+click(wired.cat,{clickDestination:()=>destination});
+assert.equal(wired.calls.visits.length,1,'click_attention: false disables replies');
+
+const unreachable=makeWired();
+click(unreachable.cat,{clickDestination:()=>null});
+assert.equal(unreachable.calls.visits.length,0,'An unreachable card is not visited');
+assert.equal(unreachable.calls.attrs['data-click-reaction'],'glance','An unreachable click still earns a glance');
+assert.equal(unreachable.calls.attrs['data-click-reason'],'out-of-reach');
+assert.equal(unreachable.cat.previewPose,'glance');
+const busyUnreachable=makeWired({motion:{kind:'walk'}});
+click(busyUnreachable.cat,{clickDestination:()=>null});
+assert.equal(busyUnreachable.calls.attrs['data-click-reaction'],'ignore','A committed step is never interrupted for an unreachable click');
+assert.equal(busyUnreachable.cat.previewPose,undefined);
+
+const far=makeWired({x:900,support:{el:card}}),near=makeWired({x:120,support:{el:otherCard}});
+const owners=new Map([[far.cat,{root}],[near.cat,{root}]]),twoCats={cardOwnerFor,clickDestination:()=>destination,attentionWinner:nearest,CAT_OWNERS:owners};
+const send=cat=>attention.call(cat,{button:0,clientX:230,clientY:300,composedPath:()=>[card,root]},twoCats);
+send(far.cat);send(near.cat);
+assert.equal(far.calls.visits.length,1,'The cat on the clicked card answers first');
+assert.equal(near.calls.visits.length,0,'A merely closer cat elsewhere does not steal the click');
+console.log('PASS: dashboard clicks reach the nearest cat, which independently investigates, glances, flinches or ignores based on mood, temperament and its own commitments; a cat already on the clicked card answers before a closer one elsewhere, an unreachable card still earns a glance without interrupting a committed step, and repeat clicks and the opt-out are honoured.');

@@ -924,15 +924,10 @@ a.setAttribute('data-play-stage','wiggle');a.playHistory?.push('wiggle');return 
 }
 };
 
-window.pixelCatCardAttentionV1=function(event,{cardOwnerFor,clickDestination,attentionWinner,CAT_OWNERS}) {
+window.pixelCatCardAttentionV1=function(event,deps) {
 if(this.userHeld||this.config.click_attention===false||!this.root||event.button!==0||event.ctrlKey||event.metaKey||event.altKey||event.shiftKey||this.blocked())return;
 const path=event.composedPath();if(!path.includes(this.root)||path.includes(this)||path.some(el=>el.dataset?.pixelCatOverlay!==undefined||el.dataset?.catPost!==undefined||el.localName==='pixel-cat-home'||el.matches?.('input,textarea,select,[contenteditable="true"]')))return;
-const card=path.find(el=>el.localName==='ha-card'||el.hasAttribute?.('data-cat-surface'));if(!card)return;const owner=cardOwnerFor(card),surfaces=this.surfaces.filter(s=>!s.home&&cardOwnerFor(s.el)===owner);
-const destination=clickDestination(surfaces,event.clientX,event.clientY,this.scale,s=>!!this.pathTo(s)&&!!this.pathTo(this.home,s));if(!destination)return;
-const peers=[...CAT_OWNERS].filter(([cat,info])=>info.root===this.root&&cat.isConnected&&!cat.blocked()&&cat.surfaces.some(s=>!s.home&&cardOwnerFor(s.el)===owner&&cat.pathTo(s)&&cat.pathTo(cat.home,s))).map(([cat])=>cat);if(peers.length&&attentionWinner(peers,event.clientX,event.clientY)!==this)return;
-const now=performance.now();if(now<(this.nextClickReactionAt||0))return;this.nextClickReactionAt=now+600;
-this.setAttribute('data-attention-source','card-click');this.setAttribute('data-attention-target',destination.id);
-if(window.pixelCatClickReactionsV1)window.pixelCatClickReactionsV1.apply(this,destination);else this.requestVisit(destination.id,'interested',destination.point);
+const card=path.find(el=>el.localName==='ha-card'||el.hasAttribute?.('data-cat-surface'));if(card)window.pixelCatClickReactionsV1?.handle(this,event,card,deps);
 };
 
 window.pixelCatHomePostsV1={
@@ -5108,6 +5103,26 @@ window.pixelCatDashboardChaseV1={
 // chooses what to do: investigate, glance over, flinch or keep its own business.
 // Mood and temperament weigh the choice; no outcome is guaranteed or scripted.
 window.pixelCatClickReactionsV1={
+ handle(cat,event,card,{cardOwnerFor,clickDestination,attentionWinner,CAT_OWNERS}){
+  const owner=cardOwnerFor(card),surfaces=(cat.surfaces||[]).filter(s=>!s.home&&cardOwnerFor(s.el)===owner);
+  if(!surfaces.length)return false;
+  const destination=clickDestination(surfaces,event.clientX,event.clientY,cat.scale,s=>!!cat.pathTo(s)&&!!cat.pathTo(cat.home,s));
+  const candidates=[...CAT_OWNERS].filter(([peer,info])=>info.root===cat.root&&peer.isConnected&&!peer.blocked()).map(([peer])=>peer).filter(peer=>(peer.surfaces||[]).some(s=>!s.home&&cardOwnerFor(s.el)===owner));
+  // A cat already sitting on the clicked card answers before a merely closer one elsewhere.
+  const reachable=destination?candidates.filter(peer=>peer.surfaces.some(s=>!s.home&&cardOwnerFor(s.el)===owner&&peer.pathTo(s)&&peer.pathTo(peer.home,s))):[];
+  const pool=reachable.length?reachable:candidates,onCard=pool.filter(peer=>peer.support?.el&&cardOwnerFor(peer.support.el)===owner),winner=attentionWinner(onCard.length?onCard:pool,event.clientX,event.clientY);
+  if(winner!==undefined&&winner!==cat)return false;
+  const now=performance.now();if(now<(cat.nextClickReactionAt||0))return false;cat.nextClickReactionAt=now+600;
+  cat.setAttribute?.('data-attention-source','card-click');cat.setAttribute?.('data-attention-target',destination?destination.id:'unreachable');
+  return destination?this.apply(cat,destination):this.notice(cat,{x:event.clientX,y:event.clientY},'out-of-reach');
+ },
+ // A click on a card this cat cannot route to still earns a glance toward it.
+ notice(cat,point,reason){
+  const t=performance.now(),busy=!!(cat.motion||cat.route?.length||cat.play||cat.social?.episode||cat.goal||cat.command||cat.pendingStartle),result=busy?'ignore':'glance';
+  if(!busy){cat.facing=(point.x??cat.x)>=cat.x+12*cat.scale?1:-1;cat.previewPose='glance';cat.forcedIdleUntil=t+1200;cat.deadline=cat.forcedIdleUntil;if(cat.idle)cat.idle.poseUntil=t;}
+  cat.setAttribute?.('data-click-reaction',result);cat.setAttribute?.('data-click-reason',reason);cat.social?.log?.('card click reaction',{reaction:result,reason});
+  return result!=='ignore';
+ },
  choose(cat,destination){
   const mood=cat.ensureMood?.(),v=mood?.values||{},random=()=>mood?mood.random():Math.random(),traits=window.pixelCatTemperamentV1?.(cat.ownerKey||cat.config?.cat_id||'cat',cat.config?.temperament)||{},point=destination.point||{};
   const units=Math.hypot((point.x??cat.x)-cat.x-12*cat.scale,(point.y??cat.y)-cat.y)/Math.max(1,cat.scale);
@@ -5130,14 +5145,14 @@ window.pixelCatClickReactionsV1={
     cat.facing=(point.x??cat.x)>=cat.x+12*cat.scale?1:-1;cat.previewPose='glance';cat.forcedIdleUntil=t+1200;cat.deadline=cat.forcedIdleUntil;if(cat.idle)cat.idle.poseUntil=t;
    }
   }
-  cat.setAttribute?.('data-click-reaction',result);cat.social?.log?.('card click reaction',{reaction:result});
+  cat.setAttribute?.('data-click-reaction',result);cat.setAttribute?.('data-click-reason','reachable');cat.social?.log?.('card click reaction',{reaction:result});
   return true;
  }
 };
 
 })();
 
-window.pixelCatCardRelease=Object.freeze({version:"1.1.0",sourceHash:"dc60d4806809cfa998f80b6ad3ddf04daee5f63d43689764e59b13bf78d21b5d"});
+window.pixelCatCardRelease=Object.freeze({version:"1.1.0",sourceHash:"f07a89b40123c3318e5f5b1abbf58a8435ec4ba465d3439a1912a2965f9c8132"});
 const card=window.customCards?.find(c=>c.type==='pixel-cat-home');if(card){card.name='Pixel Cat Card';card.documentationURL='https://github.com/Future-Surfer/Pixel-Cat-Card#readme';}
 console.info('Pixel Cat Card',"1.1.0");
 })();

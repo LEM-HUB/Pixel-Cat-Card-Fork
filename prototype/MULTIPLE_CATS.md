@@ -30,9 +30,10 @@ discovery, so a cat does not perch on another cat's control panel. Edit previews
 do not claim an owner or create a roaming overlay. Disconnecting one home removes
 only its overlay/listeners; other cats continue.
 
-Click attention chooses the nearest eligible, unpaused cat in the same view that
-can reach the clicked card and return home. It avoids sending all cats to the same
-click. Ordinary autonomous movement is independent; collision avoidance, social
+Click attention prefers an eligible, unpaused cat already on the clicked card, then
+the nearest cat in the same view that can reach it and return home. It avoids
+sending all cats to the same click. A click on a card no cat can reach still earns
+a glance from the nearest eligible cat. Ordinary autonomous movement is independent; collision avoidance, social
 interactions and exclusive perch reservations are future features.
 
 Verification: `scripts/test-roaming-multiple-cats.mjs` plus the existing roaming
